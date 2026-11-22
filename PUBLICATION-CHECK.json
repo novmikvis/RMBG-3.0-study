@@ -1,0 +1,10 @@
+{
+  "images": 53,
+  "image_files": 214,
+  "image_bytes": 26945969,
+  "all_images_decode_webp_or_avif": true,
+  "exif_xmp_icc_in_images": false,
+  "private_path_account_or_credential_patterns_found": 0,
+  "build_scripts_and_logs_included": false,
+  "index_sha256": "172c56c857526e40"
+}

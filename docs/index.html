@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RMBG-3.0 Evaluation</title>
+<meta name="description" content="53 hard background-removal cases for Bria's RMBG-3.0 in ComfyUI. Compare each original photo with its cutout and matte.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RMBG-3.0 study">
+<meta property="og:title" content="RMBG-3.0 Evaluation">
+<meta property="og:description" content="53 hard background-removal cases for Bria's RMBG-3.0 in ComfyUI. Compare each original photo with its cutout and matte.">
+<meta property="og:url" content="https://novmikvis.github.io/RMBG-3.0-study/">
+<meta property="og:image" content="https://novmikvis.github.io/RMBG-3.0-study/preview.jpg">
+<meta property="og:image:width" content="1440">
+<meta property="og:image:height" content="900">
+<meta property="og:image:alt" content="RMBG-3.0 viewer: original photo on the left, cutout on a striped background on the right">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="RMBG-3.0 Evaluation">
+<meta name="twitter:description" content="53 hard background-removal cases for Bria's RMBG-3.0 in ComfyUI. Compare each original photo with its cutout and matte.">
+<meta name="twitter:image" content="https://novmikvis.github.io/RMBG-3.0-study/preview.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&display=swap">
+<style>
+/* Visual language: the "new UI" values of ComfyUI-Panorama-Stickers docs/design.md (dark). Flat: no borders, no shadows, no blur.
+   Gray steps: frame / window / fill / hover / pressed / line / strong; colour only for meaning (muted yellow = impressive). */
+:root {
+  color-scheme: dark;
+  --frame: #121314; --window: #1b1c1e; --fill: #2c2c2e; --hover: #343436; --pressed: #3c3c3f;
+  --line: #2a2b2d; --line-strong: #48484c; --strong: #d6d6da; --on-strong: #111112;
+  --fg: #dcdce0; --fg-2: #8e8f93;
+  --yellow: #e8cf74; --ice: #aecedb;
+  --float: rgba(27, 28, 30, 0.85);
+  --font: "Plus Jakarta Sans", Geist, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --stripes: repeating-linear-gradient(-45deg, #7f7f7f 0 8.49px, #cfcfcf 8.49px 16.97px);
+  --checker: repeating-conic-gradient(#cccccc 0 25%, #ffffff 0 50%) 0 0 / 20px 20px;
+  --ease: 120ms ease;
+  --ctl: 28px;      /* control height; 44px on touch screens (HIG minimum target) */
+  --seg: 26px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--frame); color: var(--fg); font: 500 12px/1.4 var(--font); font-variant-numeric: tabular-nums; }
+a { color: var(--ice); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.frame { padding: 8px; padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right));
+  display: flex; flex-direction: column; gap: 8px; min-height: 100vh; min-height: 100dvh;
+  max-width: 1440px; margin: 0 auto; box-sizing: border-box; }  /* centred column on wide screens; margins grow outside it */
+.win { background: var(--window); border-radius: 12px; }
+header.win { padding: 14px 16px 12px; }
+h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+.sub { color: var(--fg-2); font-size: 12px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 8px 10px; position: sticky; top: 8px; z-index: 5; }
+.bar-l, .bar-r { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; min-width: 0; }
+.bar-r { margin-left: auto; }
+.subbar { display: flex; gap: 6px 16px; align-items: center; padding: 0 8px; min-height: 18px; color: var(--fg-2); font-size: 11px; }
+.grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; max-width: 100%; }
+.lbl { color: var(--fg-2); font-size: 11px; margin: 0 2px 0 4px; }
+svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+/* pill buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; height: var(--ctl); padding: 0 12px; border: 0; border-radius: 999px; background: var(--fill);
+  color: var(--fg); font: 600 12px/1 var(--font); cursor: pointer; transition: background var(--ease), color var(--ease); white-space: nowrap; }
+.btn:hover, .btn:focus-visible { background: var(--hover); outline: none; }
+.btn:active { background: var(--pressed); transition: none; }
+.btn.icon { width: var(--ctl); padding: 0; justify-content: center; }
+/* segmented control with a sliding knob; labels keep one weight so nothing shifts */
+.seg { position: relative; display: inline-flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; padding: 2px; border-radius: 999px; background: var(--fill); }
+.seg::-webkit-scrollbar { display: none; }
+.seg .knob { position: absolute; top: 2px; bottom: 2px; left: 0; width: 0; border-radius: 999px; background: var(--strong); transition: transform 160ms ease-out, width 160ms ease-out; pointer-events: none; }
+.seg button { position: relative; z-index: 1; flex: none; display: inline-flex; align-items: center; gap: 6px; height: var(--seg); padding: 0 11px; border: 0; border-radius: 999px; background: none;
+  color: var(--fg-2); font: 600 12px/1 var(--font); cursor: pointer; transition: color 160ms ease-out, background var(--ease); white-space: nowrap; }
+.seg button:hover, .seg button:focus-visible { color: var(--fg); outline: none; }
+.seg button.on { color: var(--on-strong); }
+.seg button.swb { width: 34px; padding: 0; justify-content: center; }
+.sw { width: 14px; height: 14px; border-radius: 999px; display: inline-block; flex: none; box-shadow: inset 0 0 0 1px #0004; }
+.viewer-only { display: none !important; }
+body.viewing .viewer-only { display: flex !important; }
+body.viewing span.viewer-only { display: block !important; }
+body.viewing .grid-only { display: none !important; }
+.touch-only { display: none; }
+body.touch .touch-only { display: inline; }
+body.touch .mouse-only { display: none; }
+/* grid */
+#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--tile, 300px), 1fr)); gap: 8px; }
+body.viewing #grid { display: none; }
+.tile { background: var(--window); border-radius: 12px; overflow: hidden; cursor: zoom-in; transition: background var(--ease);
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.tile:hover { background: var(--fill); }
+.tile .pic { position: relative; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; }
+.tile .pic img { max-width: 100%; max-height: 100%; display: block; pointer-events: none; -webkit-user-drag: none; }
+.tile .pic img.orig, .tile .pic img.cut { position: absolute; inset: 0; margin: auto; }
+/* grid cutout = photo thumbnail masked by the matte thumbnail (alpha); .bgk only paints the background in the same box */
+.tile .pic img.bgk { object-position: -99999px 0; }
+.tile .pic img.cut { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
+/* touch: sideways drag moves the divider, vertical drag scrolls; no long-press callout or text selection */
+body.touch .tile .pic { touch-action: pan-y; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* touch viewer: previous / next sit under the image on the right, within thumb reach */
+.mnav { display: none; }
+body.touch.viewing .mnav { display: flex; justify-content: flex-end; gap: 8px; padding: 0 8px; }
+body.touch #prev, body.touch #next { display: none; }
+.tile .pic img.cut.white { filter: brightness(0) invert(1); }
+.tile .pic .split { position: absolute; z-index: 1; width: 2px; margin-left: -1px; background: var(--strong); outline: 1px solid #0009; pointer-events: none; display: none; }
+.badge { position: absolute; top: 10px; left: 10px; z-index: 2; height: 22px; padding: 0 9px; display: inline-flex; align-items: center; border-radius: 999px;
+  font: 600 11px/1 var(--font); background: var(--float); color: var(--yellow); pointer-events: none; }
+.tile .cap { padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--fg-2); }
+.tile .cap b { color: var(--fg); font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .cap span { white-space: nowrap; }
+.bg-teal { background: #127680; } .bg-black { background: #000; } .bg-white { background: #fff; }
+.bg-checker { background: var(--checker); } .bg-stripes { background: var(--stripes); } .bg-matte { background: #000; }
+/* viewer */
+body.viewing .frame { height: 100vh; height: 100dvh; }
+#stage { display: none; gap: 8px; flex: 1; min-height: 0; }
+body.viewing #stage { display: flex; }
+.view { position: relative; flex: 1; min-width: 0; min-height: 0; border-radius: 12px; overflow: hidden; background: var(--window); }
+.view canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.view canvas.drag { cursor: grabbing; }
+.lab { position: absolute; top: 16px; left: 16px; height: 28px; min-width: 92px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px; font: 600 12px/1 var(--font); background: var(--float); color: var(--fg); pointer-events: none; }
+.lab.r { left: auto; right: 16px; min-width: 0; }
+.hint { color: var(--fg-2); font-size: 11px; line-height: 1.5; padding: 0 8px; max-width: 100ch; display: none; }
+body.viewing .hint { display: block; }
+#vsrc { flex: none; align-items: center; color: var(--ice); font-weight: 600; font-size: 12px; text-decoration: none; white-space: nowrap; }
+#vsrc:hover { text-decoration: underline; }
+body.touch #vsrc { display: inline-flex; align-items: center; min-height: 44px; }
+#vtitle { min-width: 0; max-width: 110ch; }
+#vtitle .vt { color: var(--fg); font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#vtitle .why { color: var(--fg-2); font-size: 11px; line-height: 1.45; margin-top: 2px; }
+/* footer */
+footer.win { padding: 14px 16px 16px; }
+body.viewing footer { display: none; }
+footer h2 { font-size: 13px; font-weight: 600; margin: 0 0 10px; }
+.links { width: 100%; max-width: 960px; border-collapse: collapse; }
+.links td { padding: 8px 12px 8px 0; border-top: 1px solid var(--line); vertical-align: top; font-size: 12px; }
+.links td:first-child { color: var(--fg); font-weight: 600; white-space: nowrap; width: 1%; }
+.links td.d { color: var(--fg-2); }
+/* touch screens: 44 px targets, no background or tile-size controls on the grid */
+body.touch { --ctl: 44px; --seg: 40px; }
+body.touch .seg button { padding: 0 14px; font-size: 13px; }
+body.touch .seg button.swb { width: 44px; }
+body.touch:not(.viewing) .grid-bg, body.touch .tiles-grp, body.touch .zoom-grp { display: none !important; }
+body.touch .tile { cursor: default; }
+@media (max-width: 700px) {
+  #vtitle .why { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile .cap { flex-direction: column; gap: 2px; padding: 8px 10px 10px; }
+  body.viewing header { display: none; }
+  body.viewing .bar { position: static; }
+  .bar-r { margin-left: 0; }
+  .bar { gap: 8px; padding: 8px; }
+  .bar-l, .bar-r { gap: 8px; }
+  .lbl { display: none; }
+  #stage.side { flex-direction: column; }
+  .links td:first-child { white-space: normal; width: 38%; }
+}
+@media (max-width: 420px) { #grid { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-grid" viewBox="0 0 24 24"><path d="M5 4h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z"/><path d="M15 4h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z"/><path d="M5 14h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z"/><path d="M15 14h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1z"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 6l-6 6l6 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6l-6 6"/></symbol>
+</svg>
+<div class="frame">
+<header class="win">
+  <h1 data-copy="title"></h1>
+  <div class="sub" data-copy="subtitle"></div>
+</header>
+
+<div class="bar win">
+  <div class="bar-l">
+    <div class="grp viewer-only">
+      <button class="btn" id="back" title="Esc"><svg class="i"><use href="#i-grid"/></svg><span data-copy="back"></span></button>
+      <button class="btn icon" id="prev" aria-label="Previous image" title="←"><svg class="i"><use href="#i-left"/></svg></button>
+      <button class="btn icon" id="next" aria-label="Next image" title="→"><svg class="i"><use href="#i-right"/></svg></button>
+    </div>
+    <div class="grp viewer-only"><span class="lbl" data-copy="view_label"></span>
+      <div class="seg"><button data-mode="side">Side by side</button><button data-mode="slider">Slider</button><button data-mode="flicker">Flicker</button></div>
+    </div>
+    <div class="grp viewer-only zoom-grp"><span class="lbl" data-copy="zoom_label"></span>
+      <div class="seg"><button data-zoom="fit">Fit</button><button data-zoom="1">100%</button><button data-zoom="2">200%</button><button data-zoom="4">400%</button></div>
+    </div>
+    <div class="grp grid-only">
+      <div class="seg"><button data-filter="all" data-copy="filter_all"></button><button data-filter="imp" data-copy="filter_imp"></button></div>
+    </div>
+    <div class="grp grid-only tiles-grp"><span class="lbl">Tiles</span>
+      <div class="seg"><button data-tile="220px">S</button><button data-tile="300px">M</button><button data-tile="440px">L</button></div>
+    </div>
+  </div>
+  <div class="bar-r">
+    <div class="grp grid-bg"><span class="lbl" data-copy="bg_label"></span>
+      <div class="seg">
+        <button data-bg="teal" class="swb" title="#127680 (1)" aria-label="#127680"><i class="sw" style="background:#127680"></i></button>
+        <button data-bg="checker" class="swb" title="Checker (2)" aria-label="Checker"><i class="sw" style="background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/6px 6px"></i></button>
+        <button data-bg="stripes" class="swb" title="Stripes (3)" aria-label="Stripes"><i class="sw" style="background:repeating-linear-gradient(-45deg,#7f7f7f 0 2px,#cfcfcf 2px 4px)"></i></button>
+        <button data-bg="black" class="swb" title="Black (4)" aria-label="Black"><i class="sw" style="background:#000"></i></button>
+        <button data-bg="white" class="swb" title="White (5)" aria-label="White"><i class="sw" style="background:#fff"></i></button>
+        <button data-bg="matte" title="Matte (6)">Matte</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="subbar"><span id="vtitle" class="viewer-only"></span><a id="vsrc" class="viewer-only" target="_blank" rel="noopener" data-copy="image_source"></a>
+  <span class="grid-only"><span class="mouse-only" data-copy="grid_hint_desktop"></span><span class="touch-only" data-copy="grid_hint_touch"></span></span></div>
+<div id="grid"></div>
+<div id="stage"></div>
+<div class="mnav"><button class="btn icon" id="prev2" aria-label="Previous image"><svg class="i"><use href="#i-left"/></svg></button><button class="btn icon" id="next2" aria-label="Next image"><svg class="i"><use href="#i-right"/></svg></button></div>
+<div class="hint"><span class="mouse-only" data-copy="viewer_hint_desktop"></span><span class="touch-only" data-copy="viewer_hint_touch"></span></div>
+<footer class="win">
+  <h2 data-copy="footer_heading"></h2>
+  <table class="links"><tbody id="links"></tbody></table>
+</footer>
+</div>
+
+<script>
+const IMAGES = [{"title":"01 · Sunglasses on linen","id":"clothing_P0__30_","w":2016,"h":2016,"pick":"best of 4 seeds · seed 424244: keeps the gap between nose pad and temple; 424245 fills it","impressive":false,"kind":"4 MP upscale","src":"assets/clothing-p0-30-original.avif","matte":"assets/clothing-p0-30-matte.webp","ts":"assets/clothing-p0-30-thumb.avif","tm":"assets/clothing-p0-30-thumb-matte.webp","cat":"clothing"},{"title":"02 · Helicopter at dusk","id":"poor_lighting_a34e4ce47d1afbb3ca9b4a70d1163e23_poor_lighting","w":2464,"h":1632,"pick":"best of 4 seeds · seed 424243: only 424243 keeps the tail-rotor blur disk; main blade semi-transparent like motion blur","impressive":true,"kind":"4 MP upscale","src":"assets/poor-lighting-a34e4ce47d1afbb3ca9b4a70d1163e23-poor-lighting-original.avif","matte":"assets/poor-lighting-a34e4ce47d1afbb3ca9b4a70d1163e23-poor-lighting-matte.webp","ts":"assets/poor-lighting-a34e4ce47d1afbb3ca9b4a70d1163e23-poor-lighting-thumb.avif","tm":"assets/poor-lighting-a34e4ce47d1afbb3ca9b4a70d1163e23-poor-lighting-thumb-matte.webp","cat":"poor lighting"},{"title":"03 · Group on a lake pier","id":"person_26649361141_cb5ff7dfdf_c","w":2464,"h":1632,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/person-26649361141-cb5ff7dfdf-c-original.avif","matte":"assets/person-26649361141-cb5ff7dfdf-c-matte.webp","ts":"assets/person-26649361141-cb5ff7dfdf-c-thumb.avif","tm":"assets/person-26649361141-cb5ff7dfdf-c-thumb-matte.webp","cat":"person"},{"title":"04 · Welder in the dark","id":"poor_lighting_a536d668491682f9e15c4d73a3fc81a1_poor_lighting","w":2464,"h":1632,"pick":"best of 4 seeds · seed 424245: welder plus the whole grid and sparks; the hand-picked run is blocky at the bright spot","impressive":false,"kind":"4 MP upscale","src":"assets/poor-lighting-a536d668491682f9e15c4d73a3fc81a1-poor-lighting-original.avif","matte":"assets/poor-lighting-a536d668491682f9e15c4d73a3fc81a1-poor-lighting-matte.webp","ts":"assets/poor-lighting-a536d668491682f9e15c4d73a3fc81a1-poor-lighting-thumb.avif","tm":"assets/poor-lighting-a536d668491682f9e15c4d73a3fc81a1-poor-lighting-thumb-matte.webp","cat":"poor lighting"},{"title":"05 · Mesh top on a red cushion","id":"clothing_P0__21_","w":2016,"h":2016,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/clothing-p0-21-original.avif","matte":"assets/clothing-p0-21-matte.webp","ts":"assets/clothing-p0-21-thumb.avif","tm":"assets/clothing-p0-21-thumb-matte.webp","cat":"clothing"},{"title":"06 · Woman in an open-knit cardigan","id":"own_A_woman_showing_wool_dress_with_holes","w":2016,"h":2016,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/own-a-woman-showing-wool-dress-with-holes-original.avif","matte":"assets/own-a-woman-showing-wool-dress-with-holes-matte.webp","ts":"assets/own-a-woman-showing-wool-dress-with-holes-thumb.avif","tm":"assets/own-a-woman-showing-wool-dress-with-holes-thumb-matte.webp","cat":"own pick"},{"title":"07 · Bag and stationery","id":"multiple_foreground_PXL_20230419_114040225","w":2304,"h":1728,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/multiple-foreground-pxl-20230419-114040225-original.avif","matte":"assets/multiple-foreground-pxl-20230419-114040225-matte.webp","ts":"assets/multiple-foreground-pxl-20230419-114040225-thumb.avif","tm":"assets/multiple-foreground-pxl-20230419-114040225-thumb-matte.webp","cat":"multiple foreground"},{"title":"08 · Fruit stall with a price sign","id":"multiple_foreground_PXL_20230419_123343985","w":2304,"h":1728,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/multiple-foreground-pxl-20230419-123343985-original.avif","matte":"assets/multiple-foreground-pxl-20230419-123343985-matte.webp","ts":"assets/multiple-foreground-pxl-20230419-123343985-thumb.avif","tm":"assets/multiple-foreground-pxl-20230419-123343985-thumb-matte.webp","cat":"multiple foreground"},{"title":"09 · Belt on a neutral background","id":"fashion_accessory_allenai_pixmo-cap_627930","w":2400,"h":1664,"pick":"best of 4 seeds · seed 424245: only 424245 keeps the light inner edge of the strap","impressive":false,"kind":"4 MP upscale","src":"assets/fashion-accessory-allenai-pixmo-cap-627930-original.avif","matte":"assets/fashion-accessory-allenai-pixmo-cap-627930-matte.webp","ts":"assets/fashion-accessory-allenai-pixmo-cap-627930-thumb.avif","tm":"assets/fashion-accessory-allenai-pixmo-cap-627930-thumb-matte.webp","cat":"fashion accessory"},{"title":"10 · Woman by an open fire","id":"poor_lighting_914768acd7871443426ac3b3fdcc3345_poor_lighting","w":800,"h":799,"pick":"hand-picked run on the original: only the hand-picked run keeps the translucent smoke and the bowl; upscale runs either add the coal pile and paper (424242/424243/424245) or cut the smoke (424244)","impressive":false,"kind":"original · hand-picked","src":"assets/poor-lighting-914768acd7871443426ac3b3fdcc3345-poor-lighting-original.avif","matte":"assets/poor-lighting-914768acd7871443426ac3b3fdcc3345-poor-lighting-matte.webp","ts":"assets/poor-lighting-914768acd7871443426ac3b3fdcc3345-poor-lighting-thumb.avif","tm":"assets/poor-lighting-914768acd7871443426ac3b3fdcc3345-poor-lighting-thumb-matte.webp","cat":"poor lighting"},{"title":"11 · Red wire chair","id":"thin_structures_IMG_8138","w":1728,"h":2304,"pick":"best of 4 seeds · seed 424242: chair only; 424245 also takes the chandelier","impressive":true,"kind":"4 MP upscale","src":"assets/thin-structures-img-8138-original.avif","matte":"assets/thin-structures-img-8138-matte.webp","ts":"assets/thin-structures-img-8138-thumb.avif","tm":"assets/thin-structures-img-8138-thumb-matte.webp","cat":"thin structures"},{"title":"12 · Bride in a veil at a festival","id":"thin_structures_b89e5018f9208fed35198d4c4263edd8_thin_structures","w":2304,"h":1728,"pick":"best of 4 seeds · seed 424243: only 424243 keeps the whole row of people","impressive":false,"kind":"4 MP upscale","src":"assets/thin-structures-b89e5018f9208fed35198d4c4263edd8-thin-struct-original.avif","matte":"assets/thin-structures-b89e5018f9208fed35198d4c4263edd8-thin-struct-matte.webp","ts":"assets/thin-structures-b89e5018f9208fed35198d4c4263edd8-thin-struct-thumb.avif","tm":"assets/thin-structures-b89e5018f9208fed35198d4c4263edd8-thin-struct-thumb-matte.webp","cat":"thin structures"},{"title":"13 · Wild parsley leaves","id":"complex_textures_adb58a338a54b7072f6f2b9abbd72140_complex_textures","w":2464,"h":1632,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/complex-textures-adb58a338a54b7072f6f2b9abbd72140-complex-te-original.avif","matte":"assets/complex-textures-adb58a338a54b7072f6f2b9abbd72140-complex-te-matte.webp","ts":"assets/complex-textures-adb58a338a54b7072f6f2b9abbd72140-complex-te-thumb.avif","tm":"assets/complex-textures-adb58a338a54b7072f6f2b9abbd72140-complex-te-thumb-matte.webp","cat":"complex textures"},{"title":"14 · Gift box in clear wrap","id":"thin_structures_PXL_20230419_114121567","w":1728,"h":2304,"pick":"best of 4 seeds · seed 424242: all 4 and the hand-picked run practically identical","impressive":false,"kind":"4 MP upscale","src":"assets/thin-structures-pxl-20230419-114121567-original.avif","matte":"assets/thin-structures-pxl-20230419-114121567-matte.webp","ts":"assets/thin-structures-pxl-20230419-114121567-thumb.avif","tm":"assets/thin-structures-pxl-20230419-114121567-thumb-matte.webp","cat":"thin structures"},{"title":"15 · Lace pattern on a book page","id":"thin_structures_fcb028e3d446d32852cd7f1331db4b30_thin_structures","w":1696,"h":2368,"pick":"best of 4 seeds · seed 424245: most open lace holes; 424244 noisy","impressive":false,"kind":"4 MP upscale","src":"assets/thin-structures-fcb028e3d446d32852cd7f1331db4b30-thin-struct-original.avif","matte":"assets/thin-structures-fcb028e3d446d32852cd7f1331db4b30-thin-struct-matte.webp","ts":"assets/thin-structures-fcb028e3d446d32852cd7f1331db4b30-thin-struct-thumb.avif","tm":"assets/thin-structures-fcb028e3d446d32852cd7f1331db4b30-thin-struct-thumb-matte.webp","cat":"thin structures"},{"title":"16 · Woman in a white dress on grass","id":"own_A_woman_in_white_dress_walking_on_grass_with_three_women_behind_her","w":3328,"h":4992,"pick":"single run · seed 424242","impressive":false,"kind":"original","src":"assets/own-a-woman-in-white-dress-walking-on-grass-with-three-women-original.avif","matte":"assets/own-a-woman-in-white-dress-walking-on-grass-with-three-women-matte.webp","ts":"assets/own-a-woman-in-white-dress-walking-on-grass-with-three-women-thumb.avif","tm":"assets/own-a-woman-in-white-dress-walking-on-grass-with-three-women-thumb-matte.webp","cat":"own pick"},{"title":"17 · Van door with an open panel","id":"thin_structures_PXL_20230419_110437139","w":1728,"h":2304,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/thin-structures-pxl-20230419-110437139-original.avif","matte":"assets/thin-structures-pxl-20230419-110437139-matte.webp","ts":"assets/thin-structures-pxl-20230419-110437139-thumb.avif","tm":"assets/thin-structures-pxl-20230419-110437139-thumb-matte.webp","cat":"thin structures"},{"title":"18 · Dragonfly on a rock","id":"thin_structures_92626648c5010ac19089e218aa7518c9_thin_structures","w":800,"h":1194,"pick":"hand-picked run on the original: dragonfly wings: the hand-picked run keeps the vein net with clear cells; upscale runs make the wings opaque with rock texture (424242 about 70%)","impressive":true,"kind":"original · hand-picked","src":"assets/thin-structures-92626648c5010ac19089e218aa7518c9-thin-struct-original.avif","matte":"assets/thin-structures-92626648c5010ac19089e218aa7518c9-thin-struct-matte.webp","ts":"assets/thin-structures-92626648c5010ac19089e218aa7518c9-thin-struct-thumb.avif","tm":"assets/thin-structures-92626648c5010ac19089e218aa7518c9-thin-struct-thumb-matte.webp","cat":"thin structures"},{"title":"19 · Feathered heels on a shoebox","id":"clothing_P0__9_","w":2016,"h":2016,"pick":"best of 4 seeds · seed 424243: cleanest thin quills; 424244/424245 punch holes in the feathers","impressive":true,"kind":"4 MP upscale","src":"assets/clothing-p0-9-original.avif","matte":"assets/clothing-p0-9-matte.webp","ts":"assets/clothing-p0-9-thumb.avif","tm":"assets/clothing-p0-9-thumb-matte.webp","cat":"clothing"},{"title":"20 · Man with long hair and a beard","id":"own_Man_in_red_shirt","w":2000,"h":1442,"pick":"best of 4 seeds · seed 424242: best curls on the hair edge; 424245 loses them","impressive":false,"kind":"original","src":"assets/own-man-in-red-shirt-original.avif","matte":"assets/own-man-in-red-shirt-matte.webp","ts":"assets/own-man-in-red-shirt-thumb.avif","tm":"assets/own-man-in-red-shirt-thumb-matte.webp","cat":"own pick"},{"title":"21 · Toy zebra in a hand","id":"toy_allenai_pixmo-cap_53518","w":1728,"h":2304,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/toy-allenai-pixmo-cap-53518-original.avif","matte":"assets/toy-allenai-pixmo-cap-53518-matte.webp","ts":"assets/toy-allenai-pixmo-cap-53518-thumb.avif","tm":"assets/toy-allenai-pixmo-cap-53518-thumb-matte.webp","cat":"toy"},{"title":"22 · Feathered black sandals","id":"clothing_P0__8_","w":2016,"h":2016,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/clothing-p0-8-original.avif","matte":"assets/clothing-p0-8-matte.webp","ts":"assets/clothing-p0-8-thumb.avif","tm":"assets/clothing-p0-8-thumb-matte.webp","cat":"clothing"},{"title":"23 · Hand holding wildflowers","id":"own_A_hand_holding_flowers_on_greenery_bg","w":2016,"h":2016,"pick":"single run · seed 424242","impressive":true,"kind":"4 MP upscale","src":"assets/own-a-hand-holding-flowers-on-greenery-bg-original.avif","matte":"assets/own-a-hand-holding-flowers-on-greenery-bg-matte.webp","ts":"assets/own-a-hand-holding-flowers-on-greenery-bg-thumb.avif","tm":"assets/own-a-hand-holding-flowers-on-greenery-bg-thumb-matte.webp","cat":"own pick"},{"title":"24 · Centipede on a rock","id":"animal_opendiffusionai-pexels-photos-janpf_52","w":2432,"h":1632,"pick":"best of 4 seeds · seed 424245: seed 424243 drops leg segments; 424242/424245 close, 424245 cleaner","impressive":true,"kind":"4 MP upscale","src":"assets/animal-opendiffusionai-pexels-photos-janpf-52-original.avif","matte":"assets/animal-opendiffusionai-pexels-photos-janpf-52-matte.webp","ts":"assets/animal-opendiffusionai-pexels-photos-janpf-52-thumb.avif","tm":"assets/animal-opendiffusionai-pexels-photos-janpf-52-thumb-matte.webp","cat":"animal"},{"title":"25 · Grasshopper in dry grass","id":"thin_structures_0b26169a801ff26019d791179ae70950_thin_structures","w":800,"h":600,"pick":"hand-picked run on the original: only the hand-picked run keeps the long antennae; upscale runs keep a stub at most","impressive":true,"kind":"original · hand-picked","src":"assets/thin-structures-0b26169a801ff26019d791179ae70950-thin-struct-original.avif","matte":"assets/thin-structures-0b26169a801ff26019d791179ae70950-thin-struct-matte.webp","ts":"assets/thin-structures-0b26169a801ff26019d791179ae70950-thin-struct-thumb.avif","tm":"assets/thin-structures-0b26169a801ff26019d791179ae70950-thin-struct-thumb-matte.webp","cat":"thin structures"},{"title":"26 · Bird specimen with labels","id":"thin_structures_b28edc34647b950f75737f268502b752_thin_structures","w":2464,"h":1632,"pick":"best of 4 seeds · seed 424242: sharpest string and feather tips; the hand-picked run is softer","impressive":true,"kind":"4 MP upscale","src":"assets/thin-structures-b28edc34647b950f75737f268502b752-thin-struct-original.avif","matte":"assets/thin-structures-b28edc34647b950f75737f268502b752-thin-struct-matte.webp","ts":"assets/thin-structures-b28edc34647b950f75737f268502b752-thin-struct-thumb.avif","tm":"assets/thin-structures-b28edc34647b950f75737f268502b752-thin-struct-thumb-matte.webp","cat":"thin structures"},{"title":"27 · Warship at night","id":"poor_lighting_e0f3ff664a289f02cf72c4eed7b4d3b2_poor_lighting","w":1632,"h":2464,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/poor-lighting-e0f3ff664a289f02cf72c4eed7b4d3b2-poor-lighting-original.avif","matte":"assets/poor-lighting-e0f3ff664a289f02cf72c4eed7b4d3b2-poor-lighting-matte.webp","ts":"assets/poor-lighting-e0f3ff664a289f02cf72c4eed7b4d3b2-poor-lighting-thumb.avif","tm":"assets/poor-lighting-e0f3ff664a289f02cf72c4eed7b4d3b2-poor-lighting-thumb-matte.webp","cat":"poor lighting"},{"title":"28 · Plates in a shop window","id":"multiple_foreground_PXL_20230419_110736863","w":2304,"h":1728,"pick":"best of 4 seeds · seed 424242: all 4 practically identical","impressive":false,"kind":"4 MP upscale","src":"assets/multiple-foreground-pxl-20230419-110736863-original.avif","matte":"assets/multiple-foreground-pxl-20230419-110736863-matte.webp","ts":"assets/multiple-foreground-pxl-20230419-110736863-thumb.avif","tm":"assets/multiple-foreground-pxl-20230419-110736863-thumb-matte.webp","cat":"multiple foreground"},{"title":"29 · Mannequin in a shop window","id":"thin_structures_PXL_20230419_080557037.MP","w":800,"h":1062,"pick":"hand-picked run on the original: only the hand-picked run keeps the chrome display objects next to the mannequin","impressive":false,"kind":"original · hand-picked","src":"assets/thin-structures-pxl-20230419-080557037-mp-original.avif","matte":"assets/thin-structures-pxl-20230419-080557037-mp-matte.webp","ts":"assets/thin-structures-pxl-20230419-080557037-mp-thumb.avif","tm":"assets/thin-structures-pxl-20230419-080557037-mp-thumb-matte.webp","cat":"thin structures"},{"title":"30 · Hummingbird in flight","id":"complex_textures_adad448f5eef334e66a3ab8e17d396b5_complex_textures","w":800,"h":629,"pick":"hand-picked run on the original: motion-blurred wing stays semi-transparent with feather structure only in the hand-picked run; upscale runs make it solid (424243) or drop it (424244/424245)","impressive":true,"kind":"original · hand-picked","src":"assets/complex-textures-adad448f5eef334e66a3ab8e17d396b5-complex-te-original.avif","matte":"assets/complex-textures-adad448f5eef334e66a3ab8e17d396b5-complex-te-matte.webp","ts":"assets/complex-textures-adad448f5eef334e66a3ab8e17d396b5-complex-te-thumb.avif","tm":"assets/complex-textures-adad448f5eef334e66a3ab8e17d396b5-complex-te-thumb-matte.webp","cat":"complex textures"},{"title":"31 · Flower vase by a window","id":"complex_textures_PXL_20230419_122729956","w":1728,"h":2304,"pick":"single run · seed 424242","impressive":true,"kind":"4 MP upscale","src":"assets/complex-textures-pxl-20230419-122729956-original.avif","matte":"assets/complex-textures-pxl-20230419-122729956-matte.webp","ts":"assets/complex-textures-pxl-20230419-122729956-thumb.avif","tm":"assets/complex-textures-pxl-20230419-122729956-thumb-matte.webp","cat":"complex textures"},{"title":"32 · Satin and lace slip","id":"clothing_P0__20_","w":2016,"h":2016,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/clothing-p0-20-original.avif","matte":"assets/clothing-p0-20-matte.webp","ts":"assets/clothing-p0-20-thumb.avif","tm":"assets/clothing-p0-20-thumb-matte.webp","cat":"clothing"},{"title":"33 · Spider web at night","id":"poor_lighting_9c2cfe3140f040ed879543e015a5ae7c_poor_lighting","w":800,"h":646,"pick":"hand-picked run on the original: the hand-picked run keeps the most web threads; best upscale run (424244) keeps fewer, 424242 also takes the leaf","impressive":true,"kind":"original · hand-picked","src":"assets/poor-lighting-9c2cfe3140f040ed879543e015a5ae7c-poor-lighting-original.avif","matte":"assets/poor-lighting-9c2cfe3140f040ed879543e015a5ae7c-poor-lighting-matte.webp","ts":"assets/poor-lighting-9c2cfe3140f040ed879543e015a5ae7c-poor-lighting-thumb.avif","tm":"assets/poor-lighting-9c2cfe3140f040ed879543e015a5ae7c-poor-lighting-thumb-matte.webp","cat":"poor lighting"},{"title":"34 · Hair in the wind, blue sky","id":"own_Woman_hair_thrown_by_the_wind_on_blue_sky_background","w":2048,"h":1952,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/own-woman-hair-thrown-by-the-wind-on-blue-sky-background-original.avif","matte":"assets/own-woman-hair-thrown-by-the-wind-on-blue-sky-background-matte.webp","ts":"assets/own-woman-hair-thrown-by-the-wind-on-blue-sky-background-thumb.avif","tm":"assets/own-woman-hair-thrown-by-the-wind-on-blue-sky-background-thumb-matte.webp","cat":"own pick"},{"title":"35 · Red maple leaves at night","id":"poor_lighting_e0b36d5b852a0ef4a852f17c004b4944_poor_lighting","w":2944,"h":1344,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/poor-lighting-e0b36d5b852a0ef4a852f17c004b4944-poor-lighting-original.avif","matte":"assets/poor-lighting-e0b36d5b852a0ef4a852f17c004b4944-poor-lighting-matte.webp","ts":"assets/poor-lighting-e0b36d5b852a0ef4a852f17c004b4944-poor-lighting-thumb.avif","tm":"assets/poor-lighting-e0b36d5b852a0ef4a852f17c004b4944-poor-lighting-thumb-matte.webp","cat":"poor lighting"},{"title":"36 · Octagonal glasses","id":"fashion_accessory_opendiffusionai-pexels-photos-janpf_19","w":800,"h":599,"pick":"hand-picked run on the original: lenses ~20% alpha in the hand-picked run; best upscale run (424244) ~65%, the others fill the lenses solid","impressive":true,"kind":"original · hand-picked","src":"assets/fashion-accessory-opendiffusionai-pexels-photos-janpf-19-original.avif","matte":"assets/fashion-accessory-opendiffusionai-pexels-photos-janpf-19-matte.webp","ts":"assets/fashion-accessory-opendiffusionai-pexels-photos-janpf-19-thumb.avif","tm":"assets/fashion-accessory-opendiffusionai-pexels-photos-janpf-19-thumb-matte.webp","cat":"fashion accessory"},{"title":"37 · Wire cart on a street","id":"thin_structures_PXL_20230419_105425850","w":800,"h":1062,"pick":"hand-picked run on the original: the hand-picked run isolates the cart; every upscale run also takes the awning and the passers-by","impressive":true,"kind":"original · hand-picked","src":"assets/thin-structures-pxl-20230419-105425850-original.avif","matte":"assets/thin-structures-pxl-20230419-105425850-matte.webp","ts":"assets/thin-structures-pxl-20230419-105425850-thumb.avif","tm":"assets/thin-structures-pxl-20230419-105425850-thumb-matte.webp","cat":"thin structures"},{"title":"38 · Glass building front at night","id":"poor_lighting_c771a79ae14f4bf842bcd0e96156f86d_poor_lighting","w":2304,"h":1728,"pick":"best of 4 seeds · seed 424243: keeps the near person with a clean edge; 424245 drops him, 424242 takes a piece of the shop","impressive":true,"kind":"4 MP upscale","src":"assets/poor-lighting-c771a79ae14f4bf842bcd0e96156f86d-poor-lighting-original.avif","matte":"assets/poor-lighting-c771a79ae14f4bf842bcd0e96156f86d-poor-lighting-matte.webp","ts":"assets/poor-lighting-c771a79ae14f4bf842bcd0e96156f86d-poor-lighting-thumb.avif","tm":"assets/poor-lighting-c771a79ae14f4bf842bcd0e96156f86d-poor-lighting-thumb-matte.webp","cat":"poor lighting"},{"title":"39 · Dragonfly on a grass stem","id":"thin_structures_39c9c0be929d4f870c364fb7c74968b3_thin_structures","w":2464,"h":1632,"pick":"best of 4 seeds · seed 424242, then a green-spill cleanup pass on the edge colours","impressive":false,"kind":"4 MP upscale","src":"assets/thin-structures-39c9c0be929d4f870c364fb7c74968b3-thin-struct-original.avif","matte":"assets/thin-structures-39c9c0be929d4f870c364fb7c74968b3-thin-struct-matte.webp","ts":"assets/thin-structures-39c9c0be929d4f870c364fb7c74968b3-thin-struct-thumb.avif","tm":"assets/thin-structures-39c9c0be929d4f870c364fb7c74968b3-thin-struct-thumb-matte.webp","csrc":"assets/thin-structures-39c9c0be929d4f870c364fb7c74968b3-thin-struct-cutout-rgb.avif","tcs":"assets/thin-structures-39c9c0be929d4f870c364fb7c74968b3-thin-struct-thumb-cutout-rgb.avif","cat":"thin structures"},{"title":"40 · Saint statue in a niche","id":"poor_lighting_491204a43e11c02dad2ef124b5e4d5c6_poor_lighting","w":1728,"h":2304,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/poor-lighting-491204a43e11c02dad2ef124b5e4d5c6-poor-lighting-original.avif","matte":"assets/poor-lighting-491204a43e11c02dad2ef124b5e4d5c6-poor-lighting-matte.webp","ts":"assets/poor-lighting-491204a43e11c02dad2ef124b5e4d5c6-poor-lighting-thumb.avif","tm":"assets/poor-lighting-491204a43e11c02dad2ef124b5e4d5c6-poor-lighting-thumb-matte.webp","cat":"poor lighting"},{"title":"41 · Bicycle wheel on grass","id":"own_bike1","w":2304,"h":1728,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/own-bike1-original.avif","matte":"assets/own-bike1-matte.webp","ts":"assets/own-bike1-thumb.avif","tm":"assets/own-bike1-thumb-matte.webp","cat":"own pick"},{"title":"42 · Signs in a fern","id":"plant_opendiffusionai_pexels-photos-janp_114","w":1728,"h":2304,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/plant-opendiffusionai-pexels-photos-janp-114-original.avif","matte":"assets/plant-opendiffusionai-pexels-photos-janp-114-matte.webp","ts":"assets/plant-opendiffusionai-pexels-photos-janp-114-thumb.avif","tm":"assets/plant-opendiffusionai-pexels-photos-janp-114-thumb-matte.webp","cat":"plant"},{"title":"43 · Tiny flowers in fingers","id":"thin_structures_8d101dacef01784c6754e2b4df2674de_thin_structures","w":1728,"h":2304,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/thin-structures-8d101dacef01784c6754e2b4df2674de-thin-struct-original.avif","matte":"assets/thin-structures-8d101dacef01784c6754e2b4df2674de-thin-struct-matte.webp","ts":"assets/thin-structures-8d101dacef01784c6754e2b4df2674de-thin-struct-thumb.avif","tm":"assets/thin-structures-8d101dacef01784c6754e2b4df2674de-thin-struct-thumb-matte.webp","cat":"thin structures"},{"title":"44 · Cosmetics on a table","id":"cosmetics_4","w":1792,"h":2240,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/cosmetics-4-original.avif","matte":"assets/cosmetics-4-matte.webp","ts":"assets/cosmetics-4-thumb.avif","tm":"assets/cosmetics-4-thumb-matte.webp","cat":"cosmetics"},{"title":"45 · Sign on a chain-link fence","id":"own_A-Fence","w":2272,"h":1760,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/own-a-fence-original.avif","matte":"assets/own-a-fence-matte.webp","ts":"assets/own-a-fence-thumb.avif","tm":"assets/own-a-fence-thumb-matte.webp","cat":"own pick"},{"title":"46 · Woman throwing her hair","id":"own_Woman_throwing_her_hair_up_in_the_air_on_the_forest_and_white_sky_background","w":2048,"h":1952,"pick":"best of 4 seeds · seed 424242: most strand separation; the hand-picked run is about equal, not better","impressive":false,"kind":"4 MP upscale","src":"assets/own-woman-throwing-her-hair-up-in-the-air-on-the-forest-and--original.avif","matte":"assets/own-woman-throwing-her-hair-up-in-the-air-on-the-forest-and--matte.webp","ts":"assets/own-woman-throwing-her-hair-up-in-the-air-on-the-forest-and--thumb.avif","tm":"assets/own-woman-throwing-her-hair-up-in-the-air-on-the-forest-and--thumb-matte.webp","cat":"own pick"},{"title":"47 · Fur cuffs on a coat","id":"clothing_P0__3_","w":2016,"h":2016,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/clothing-p0-3-original.avif","matte":"assets/clothing-p0-3-matte.webp","ts":"assets/clothing-p0-3-thumb.avif","tm":"assets/clothing-p0-3-thumb-matte.webp","cat":"clothing"},{"title":"48 · Man on a bench in the dark","id":"own_Bench_in_the_dark","w":2304,"h":1728,"pick":"best of 4 seeds · seed 424242: all close; 424245 has a line artefact in the backrest","impressive":true,"kind":"4 MP upscale","src":"assets/own-bench-in-the-dark-original.avif","matte":"assets/own-bench-in-the-dark-matte.webp","ts":"assets/own-bench-in-the-dark-thumb.avif","tm":"assets/own-bench-in-the-dark-thumb-matte.webp","cat":"own pick"},{"title":"49 · Brogues on a shoe rack","id":"shoe_allenai_pixmo-cap_326966","w":2304,"h":1728,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/shoe-allenai-pixmo-cap-326966-original.avif","matte":"assets/shoe-allenai-pixmo-cap-326966-matte.webp","ts":"assets/shoe-allenai-pixmo-cap-326966-thumb.avif","tm":"assets/shoe-allenai-pixmo-cap-326966-thumb-matte.webp","cat":"shoe"},{"title":"50 · Flatfish on sand","id":"foreback_same_color_7fd24ee2256cc81ad78e01b1bcf9a8d7_poor_lighting","w":2400,"h":1664,"pick":"best of 4 seeds · seed 424242: crisp edge in both disagreement areas; 424244 swallows sand","impressive":true,"kind":"4 MP upscale","src":"assets/foreback-same-color-7fd24ee2256cc81ad78e01b1bcf9a8d7-poor-li-original.avif","matte":"assets/foreback-same-color-7fd24ee2256cc81ad78e01b1bcf9a8d7-poor-li-matte.webp","ts":"assets/foreback-same-color-7fd24ee2256cc81ad78e01b1bcf9a8d7-poor-li-thumb.avif","tm":"assets/foreback-same-color-7fd24ee2256cc81ad78e01b1bcf9a8d7-poor-li-thumb-matte.webp","cat":"subject same colour as background"},{"title":"51 · Red hair in the wind","id":"own_Woman_hair_thrown_by_the_wind_on_the_background_of_ancient_ruins_and_white_sky","w":1760,"h":2272,"pick":"best of 4 seeds · seed 424243: cleanest strands; 424242/424245 fill a wedge of column behind the hair","impressive":true,"kind":"4 MP upscale","src":"assets/own-woman-hair-thrown-by-the-wind-on-the-background-of-ancie-original.avif","matte":"assets/own-woman-hair-thrown-by-the-wind-on-the-background-of-ancie-matte.webp","ts":"assets/own-woman-hair-thrown-by-the-wind-on-the-background-of-ancie-thumb.avif","tm":"assets/own-woman-hair-thrown-by-the-wind-on-the-background-of-ancie-thumb-matte.webp","cat":"own pick"},{"title":"52 · Puppy in a kitchen","id":"own_A_puppy_in_a_kitchen","w":2016,"h":2016,"pick":"single run · seed 424242","impressive":false,"kind":"4 MP upscale","src":"assets/own-a-puppy-in-a-kitchen-original.avif","matte":"assets/own-a-puppy-in-a-kitchen-matte.webp","ts":"assets/own-a-puppy-in-a-kitchen-thumb.avif","tm":"assets/own-a-puppy-in-a-kitchen-thumb-matte.webp","cat":"own pick"},{"title":"53 · Possum on a branch at night","id":"poor_lighting_f06d23914cd053d9a4836c7d7c09e62a_poor_lighting","w":800,"h":600,"pick":"hand-picked run on the original: only the hand-picked run keeps the thin vine on the branch (and the thin trunk on the right); best upscale run (424243) drops them","impressive":true,"kind":"original · hand-picked","src":"assets/poor-lighting-f06d23914cd053d9a4836c7d7c09e62a-poor-lighting-original.avif","matte":"assets/poor-lighting-f06d23914cd053d9a4836c7d7c09e62a-poor-lighting-matte.webp","ts":"assets/poor-lighting-f06d23914cd053d9a4836c7d7c09e62a-poor-lighting-thumb.avif","tm":"assets/poor-lighting-f06d23914cd053d9a4836c7d7c09e62a-poor-lighting-thumb-matte.webp","cat":"poor lighting"}];
+const SRC_PAGE = "sources.html";
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+const META = {};
+const COPY = {"title": "RMBG-3.0 Evaluation", "subtitle": "Cherry-picked results from the best of 4 runs after upscaling to 4 MP", "back": "Back to grid", "image_source": "Image source ↗", "filter_all": "All", "filter_imp": "★ Impressive", "badge": "★ Impressive", "view_label": "View", "zoom_label": "Zoom", "bg_label": "Background", "grid_hint_desktop": "Move the pointer across a tile to compare the original with the cutout. Click to open the tile.", "grid_hint_touch": "Drag sideways to move the divider between the original on the left and the cutout on the right. Tap a photo to open it.", "viewer_hint_desktop": "Drag divider in Slider · Right-drag, middle-drag or Shift-drag to pan in Slider · In other views, drag to pan or double-click to fit · Scroll to zoom both sides together · Esc back to grid · ← → previous or next image · 1–6 change background · S / L / F switch views · Hold Space to show cutout (swap sides in Side by side) · F pauses flicker", "viewer_hint_touch": "Drag the divider. Pinch to zoom or drag with two fingers to pan.", "footer_heading": "Sources and references", "link_sources": "Test image sources", "link_arena": "bgsys BG Removal Arena on Hugging Face (hard-case benchmark)", "link_rmbg": "RMBG-3.0 model weights (BRIA, CC BY-NC 4.0)", "link_fibo": "RMBG-3.0 files for ComfyUI (BRIA)", "link_design": "ComfyUI-Panorama-Stickers design guide", "sources_title": "Image sources", "sources_intro": "Find the sources for all 53 test images. Each bgsys BG Removal Arena image links to its row in the Hugging Face dataset. When the original source is known, the page links to it. For some images, the bgsys dataset has the only copy.", "col_image": "Image", "col_category": "Category", "col_size": "Original size", "col_source": "Source", "col_note": "Note", "back_to_gallery": "Back to gallery"};
+const LINKS = [{"label": "Test images", "text": "Test image sources", "href": "sources.html", "note": "53 images, dataset rows and original photos"}, {"label": "Benchmark", "text": "bgsys BG Removal Arena", "href": "https://huggingface.co/spaces/bgsys/background-removal-arena", "note": "Hugging Face · datasets: <a href=\"https://huggingface.co/datasets/bgsys/background-removal-arena-green-v0.2\" target=\"_blank\" rel=\"noopener\">bgsys BG Removal Arena green v0.2</a>, <a href=\"https://huggingface.co/datasets/bgsys/background-removal-arena_v0_clothing_checkered\" target=\"_blank\" rel=\"noopener\">bgsys BG Removal Arena clothing checkered</a>"}, {"label": "Model", "text": "Bria RMBG-3.0", "href": "https://huggingface.co/briaai/RMBG-3.0", "note": "Bria AI · model card and original weights · CC BY-NC 4.0"}, {"label": "ComfyUI files", "text": "Bria RMBG-3.0 for ComfyUI", "href": "https://huggingface.co/briaai/RMBG-3.0-Comfy", "note": "Bria AI · direct links: <a href=\"https://huggingface.co/briaai/RMBG-3.0-Comfy/blob/main/diffusion_models/rmbg3_int8_convrot.safetensors\" target=\"_blank\" rel=\"noopener\">rmbg3_int8_convrot</a>, <a href=\"https://huggingface.co/briaai/RMBG-3.0-Comfy/blob/main/text_encoders/qwen3vl_4b_int8_convrot.safetensors\" target=\"_blank\" rel=\"noopener\">qwen3vl_4b_int8_convrot</a>, <a href=\"https://huggingface.co/briaai/RMBG-3.0-Comfy/blob/main/vae/flux2-vae.safetensors\" target=\"_blank\" rel=\"noopener\">flux2-vae</a>"}, {"label": "UI inspiration", "text": "ComfyUI-Panorama-Stickers design guide", "href": "https://github.com/nomadoor/ComfyUI-Panorama-Stickers/blob/main/docs/design.md", "note": "New UI section in docs/design.md"}];
+const TEAL = "#127680", WIN = "#1b1c1e";
+const TOUCH = matchMedia("(hover: none) and (pointer: coarse)").matches;
+if (TOUCH) document.body.classList.add("touch");
+document.querySelectorAll("[data-copy]").forEach(el => { if (COPY[el.dataset.copy] != null) el.textContent = COPY[el.dataset.copy]; });
+document.getElementById("links").innerHTML = LINKS.map(l =>
+  `<tr><td>${l.label}</td><td class="d"><a href="${l.href}"${l.href.startsWith("http") ? ' target="_blank" rel="noopener"' : ""}>${l.text}</a>${l.note ? " · " + l.note : ""}</td></tr>`).join("");
+
+const st = { i: 0, bg: "stripes", mode: "slider", s: 1, ox: 0, oy: 0, split: 0.5, swap: false, hold: false, flickOn: true, viewing: false, tile: "300px", filter: "all", zoom: "fit" };
+const PKEY = "rmbg3-gallery-prefs-v3";
+try { const p = JSON.parse(localStorage.getItem(PKEY) || "{}"); Object.assign(st, { bg: p.bg || st.bg, mode: p.mode || st.mode, tile: p.tile || st.tile }); } catch (e) {}
+const savePrefs = () => { try { localStorage.setItem(PKEY, JSON.stringify({ bg: st.bg, mode: st.mode, tile: st.tile })); } catch (e) {} };
+const grid = document.getElementById("grid");
+const isImp = d => !!d.impressive;
+
+// ---------- order: random for each browser, kept on refresh and later visits (localStorage).
+// Ctrl+Shift+R / Ctrl+F5 / Shift+F5 pressed on the page clears it, so the hard reload gets a new order.
+const OKEY = "rmbg3-gallery-order";
+let order = null;
+try {
+  const saved = JSON.parse(localStorage.getItem(OKEY) || "null"), idx = new Map(IMAGES.map((d, i) => [d.id, i]));
+  if (Array.isArray(saved) && saved.length === IMAGES.length && saved.every(id => idx.has(id))) order = saved.map(id => idx.get(id));
+} catch (e) {}
+if (!order) {
+  order = IMAGES.map((_, i) => i);
+  for (let k = order.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [order[k], order[j]] = [order[j], order[k]]; }
+  try { localStorage.setItem(OKEY, JSON.stringify(order.map(i => IMAGES[i].id))); } catch (e) {}
+}
+addEventListener("keydown", e => {
+  const hard = (e.key === "F5" && (e.ctrlKey || e.shiftKey)) || ((e.key === "r" || e.key === "R") && (e.ctrlKey || e.metaKey) && e.shiftKey);
+  if (hard) try { localStorage.removeItem(OKEY); } catch (err) {}
+}, true);
+let view = order;
+function rebuildView() { view = order.filter(i => st.filter === "all" || isImp(IMAGES[i])); if (!view.length) view = order; }
+
+// ---------- grid: mouse move wipes from the original to the cutout; on touch screens the divider rests at 50% and a sideways drag moves it
+let restFns = [];  // touch tiles: re-place the resting divider after a resize
+function buildGrid() {
+  restFns = [];
+  grid.style.setProperty("--tile", st.tile);
+  rebuildView();
+  grid.innerHTML = view.map(i => { const d = IMAGES[i]; return `
+    <div class="tile" data-i="${i}">
+      <div class="pic">${isImp(d) ? `<span class="badge">${COPY.badge || "★ Impressive"}</span>` : ""}<img class="bgk bg-${st.bg}" src="${d.ts}" alt="${d.title}" loading="lazy"><img class="cut${st.bg === "matte" ? " white" : ""}" src="${d.tcs || d.ts}" alt="" loading="lazy" style="-webkit-mask-image:url(${d.tm});mask-image:url(${d.tm})"><img class="orig" src="${d.ts}" alt="" loading="lazy"><i class="split"></i></div>
+      <div class="cap" title="${d.pick}"><b>${d.title}</b><span>${d.w}×${d.h} · ${d.kind}</span></div>
+    </div>`; }).join("");
+  grid.querySelectorAll(".tile").forEach(t => {
+    const pic = t.querySelector(".pic"), o = t.querySelector("img.orig"), line = t.querySelector(".split");
+    let wiped = false;
+    let frac = .5;  // touch: where the divider rests (fraction of the image width)
+    const wipeAt = cx => {  // left of the line: original, right of it: cutout on the chosen background
+      const r = o.getBoundingClientRect(), pr = pic.getBoundingClientRect();
+      if (!r.width || !pr.width) return;
+      const x = Math.min(r.width, Math.max(0, cx - r.left)); frac = x / r.width;
+      o.style.clipPath = `inset(0 ${(1 - frac) * 100}% 0 0)`;  // percentages keep it right when the tile resizes
+      Object.assign(line.style, { display: "block", left: `${(r.left - pr.left + x) / pr.width * 100}%`,
+        top: `${(r.top - pr.top) / pr.height * 100}%`, height: `${r.height / pr.height * 100}%` });
+    };
+    const rest = () => { const r = o.getBoundingClientRect(); wipeAt(r.left + frac * r.width); };
+    const unwipe = () => { if (TOUCH) return rest(); o.style.clipPath = ""; line.style.display = "none"; };
+    if (TOUCH) { if (o.complete) rest(); else o.addEventListener("load", rest, { once: true }); restFns.push(rest); }
+    pic.addEventListener("pointermove", e => { if (e.pointerType === "mouse") wipeAt(e.clientX); });
+    pic.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") unwipe(); });
+    // touch: drag sideways to move the divider; vertical swipes still scroll the page (touch-action: pan-y); a tap opens
+    let drag = null;
+    pic.addEventListener("pointerdown", e => { if (e.pointerType === "mouse") return; wiped = false; drag = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false }; });
+    pic.addEventListener("pointermove", e => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.on && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) { drag.on = true; try { pic.setPointerCapture(e.pointerId); } catch (_) {} }
+      if (drag.on) wipeAt(e.clientX);
+    });
+    pic.addEventListener("pointerup", e => { if (drag && e.pointerId === drag.id && drag.on) wiped = true; drag = null; });
+    pic.addEventListener("pointercancel", () => { drag = null; });  // the browser took the gesture for a vertical scroll
+    pic.addEventListener("contextmenu", e => e.preventDefault());
+    t.addEventListener("click", () => { if (wiped) { wiped = false; return; } openViewer(+t.dataset.i); });
+  });
+}
+
+// ---------- full-res decode
+const cache = new Map();
+function loadImg(url) { return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; }); }
+function mk(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+function prepare(i) {
+  if (cache.has(i)) return cache.get(i);
+  const d = IMAGES[i];
+  const p = (async () => {
+    const [src, m, cs] = await Promise.all([loadImg(d.src), loadImg(d.matte), d.csrc ? loadImg(d.csrc) : null]);
+    const w = d.w, h = d.h;
+    const orig = mk(w, h); orig.getContext("2d").drawImage(src, 0, 0, w, h);
+    const S = orig.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, w, h);
+    const mat = mk(w, h); const mx = mat.getContext("2d", { willReadFrequently: true }); mx.drawImage(m, 0, 0, w, h);
+    const M = mx.getImageData(0, 0, w, h);  // matte file = black RGB + alpha; the matte is the alpha channel
+    const mg = new ImageData(w, h); for (let k = 0; k < w * h * 4; k += 4) { const a = M.data[k + 3]; mg.data[k] = mg.data[k + 1] = mg.data[k + 2] = a; mg.data[k + 3] = 255; }
+    mx.putImageData(mg, 0, 0);
+    const cut = mk(w, h), ic = new ImageData(w, h);
+    const C = cs ? (() => { const t = mk(w, h), x = t.getContext("2d", { willReadFrequently: true }); x.drawImage(cs, 0, 0, w, h); return x.getImageData(0, 0, w, h); })() : S;
+    for (let k = 0; k < w * h * 4; k += 4) { ic.data[k] = C.data[k]; ic.data[k + 1] = C.data[k + 1]; ic.data[k + 2] = C.data[k + 2]; ic.data[k + 3] = M.data[k + 3]; }
+    cut.getContext("2d").putImageData(ic, 0, 0);
+    return { orig, cut, mat, w, h };
+  })();
+  cache.set(i, p);
+  for (const k of [...cache.keys()]) if (cache.size > 3 && k !== i && k !== step(1) && k !== step(-1)) cache.delete(k);
+  return p;
+}
+
+// ---------- backgrounds (screen-space, scaled for the display)
+const patterns = {};
+function pattern(ctx, kind) {
+  if (patterns[kind]) return patterns[kind];
+  const d = devicePixelRatio || 1;
+  if (kind === "checker") {
+    const s = Math.round(10 * d), t = mk(2 * s, 2 * s), x = t.getContext("2d");
+    x.fillStyle = "#ffffff"; x.fillRect(0, 0, 2 * s, 2 * s); x.fillStyle = "#cccccc"; x.fillRect(0, 0, s, s); x.fillRect(s, s, s, s);
+    return (patterns[kind] = ctx.createPattern(t, "repeat"));
+  }
+  const P = Math.round(24 * d), t = mk(P, P), x = t.getContext("2d"), im = x.createImageData(P, P), n = 4;
+  for (let py = 0; py < P; py++) for (let px = 0; px < P; px++) {
+    let cov = 0;
+    for (let sy = 0; sy < n; sy++) for (let sx = 0; sx < n; sx++) cov += ((px + (sx + .5) / n + py + (sy + .5) / n) % P) < P / 2 ? 1 : 0;
+    const v = Math.round(0xcf + (0x7f - 0xcf) * cov / (n * n)), k = (py * P + px) * 4;
+    im.data[k] = im.data[k + 1] = im.data[k + 2] = v; im.data[k + 3] = 255;
+  }
+  x.putImageData(im, 0, 0);
+  return (patterns[kind] = ctx.createPattern(t, "repeat"));
+}
+function fillBg(ctx, w, h, plain, P) {
+  ctx.fillStyle = WIN; ctx.fillRect(0, 0, w, h);
+  if (plain || !P) return;
+  const bg = st.bg;
+  ctx.fillStyle = bg === "teal" ? TEAL : bg === "black" || bg === "matte" ? "#000" : bg === "white" ? "#fff" : pattern(ctx, bg);
+  ctx.fillRect(st.ox, st.oy, P.w * st.s, P.h * st.s);
+}
+// slider position is a fraction of the image width (not of the canvas)
+const splitX = (P, W) => Math.min(W, Math.max(0, st.ox + st.split * P.w * st.s));
+// side "O" = original, "C" = cutout (or matte)
+const layer = (P, side) => side === "O" ? P.orig : (st.bg === "matte" ? P.mat : P.cut);
+const label = side => side === "O" ? "Original" : (st.bg === "matte" ? "Matte" : "Cutout");
+
+// ---------- viewer
+const stage = document.getElementById("stage");
+let views = [], fitPending = true, cur = null;
+function buildStage() {
+  stage.innerHTML = ""; views = [];
+  stage.classList.toggle("side", st.mode === "side");
+  const n = st.mode === "side" ? 2 : 1;
+  for (let v = 0; v < n; v++) {
+    const box = document.createElement("div"); box.className = "view";
+    const c = document.createElement("canvas"); box.appendChild(c);
+    const l = document.createElement("div"); l.className = "lab"; box.appendChild(l);
+    if (st.mode === "slider") { const r = document.createElement("div"); r.className = "lab r"; r.textContent = label("C"); box.appendChild(r); }
+    stage.appendChild(box); views.push({ c, l, side: v === 0 ? "O" : "C" });
+    bindPanZoom(c);
+  }
+  resize();
+}
+function resize() {
+  for (const v of views) { const r = v.c.getBoundingClientRect(); v.c.width = Math.max(1, Math.round(r.width * devicePixelRatio)); v.c.height = Math.max(1, Math.round(r.height * devicePixelRatio)); }
+  fitPending = true; draw();
+}
+function fit(P) { const c = views[0].c, s = Math.min(c.width / P.w, c.height / P.h) * 0.98; st.s = s; st.ox = (c.width - P.w * s) / 2; st.oy = (c.height - P.h * s) / 2; st.zoom = "fit"; }
+function zoomTo(z) { const c = views[0].c, cx = c.width / 2, cy = c.height / 2, ns = z * devicePixelRatio, ix = (cx - st.ox) / st.s, iy = (cy - st.oy) / st.s; st.s = ns; st.ox = cx - ix * ns; st.oy = cy - iy * ns; }
+async function draw() {
+  if (!st.viewing || !views.length) return;
+  const i = st.i, P = await prepare(i);
+  if (i !== st.i || !st.viewing) return;
+  cur = P;
+  if (fitPending) { fit(P); fitPending = false; refreshUI(); }
+  for (const v of views) {
+    const ctx = v.c.getContext("2d"), W = v.c.width, H = v.c.height;
+    let side = v.side;
+    if (st.mode === "flicker") side = (st.hold || st.swap) ? "C" : "O";
+    else if (st.mode === "side" && st.hold) side = side === "O" ? "C" : "O";
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (st.mode === "slider") {
+      fillBg(ctx, W, H, true); ctx.setTransform(st.s, 0, 0, st.s, st.ox, st.oy); ctx.imageSmoothingEnabled = st.s < 1; ctx.drawImage(layer(P, "O"), 0, 0);
+      const sx = splitX(P, W), d = devicePixelRatio;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.save(); ctx.beginPath(); ctx.rect(sx, 0, W - sx, H); ctx.clip();
+      fillBg(ctx, W, H, false, P); ctx.setTransform(st.s, 0, 0, st.s, st.ox, st.oy); ctx.imageSmoothingEnabled = st.s < 1; ctx.drawImage(layer(P, "C"), 0, 0); ctx.restore();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#000000a0"; ctx.fillRect(sx - 2 * d, 0, 4 * d, H); ctx.fillStyle = "#d6d6da"; ctx.fillRect(sx - d, 0, 2 * d, H);
+      const R = (TOUCH ? 16 : 12) * d;
+      ctx.fillStyle = "#d6d6da"; ctx.beginPath(); ctx.arc(sx, H / 2, R, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#111112"; ctx.lineWidth = 1.75 * d; ctx.lineCap = ctx.lineJoin = "round"; ctx.beginPath();
+      ctx.moveTo(sx - 2 * d, H / 2 - 4 * d); ctx.lineTo(sx - 6 * d, H / 2); ctx.lineTo(sx - 2 * d, H / 2 + 4 * d);
+      ctx.moveTo(sx + 2 * d, H / 2 - 4 * d); ctx.lineTo(sx + 6 * d, H / 2); ctx.lineTo(sx + 2 * d, H / 2 + 4 * d); ctx.stroke();
+      side = "O";
+    } else {
+      fillBg(ctx, W, H, side === "O", P); ctx.setTransform(st.s, 0, 0, st.s, st.ox, st.oy); ctx.imageSmoothingEnabled = st.s < 1; ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(layer(P, side), 0, 0);
+    }
+    v.l.textContent = label(side) + (st.mode === "flicker" && !st.flickOn ? " · paused (F)" : "");
+  }
+}
+// Pointer input. Mouse: slider = left-drag moves the divider (right/middle/Shift-drag pans); other views drag to pan; wheel zooms.
+// Touch: one finger = divider in slider, pan in other views; two fingers = pinch zoom + pan; double tap = fit.
+function bindPanZoom(c) {
+  const pts = new Map();
+  let drag = null, pinch = null, lastTap = 0;
+  const toCanvas = e => { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * devicePixelRatio, (e.clientY - r.top) * devicePixelRatio]; };
+  const setSplit = x => { st.split = Math.min(1, Math.max(0, (x - st.ox) / (cur.w * st.s))); };
+  const startPinch = () => {
+    const [a, b] = [...pts.values()];
+    pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2, s: st.s, ox: st.ox, oy: st.oy };
+    drag = null;
+  };
+  c.addEventListener("pointerdown", e => {
+    if (!cur) return;
+    swipeId++;
+    const p = toCanvas(e);
+    pts.set(e.pointerId, p);
+    try { c.setPointerCapture(e.pointerId); } catch (err) {}
+    c.classList.add("drag");
+    if (pts.size === 2) { startPinch(); return; }
+    if (pts.size > 2) return;
+    if (e.pointerType !== "mouse") {
+      const now = performance.now();
+      if (now - lastTap < 300) { fitPending = true; draw(); lastTap = 0; return; }
+      lastTap = now;
+    }
+    const split = st.mode === "slider" && (e.pointerType !== "mouse" || (e.button === 0 && !e.shiftKey));
+    drag = { x: p[0], y: p[1], ox: st.ox, oy: st.oy, split };
+    if (split) { setSplit(p[0]); draw(); }
+  });
+  c.addEventListener("pointermove", e => {
+    if (!pts.has(e.pointerId)) return;
+    const p = toCanvas(e); pts.set(e.pointerId, p);
+    if (pinch && pts.size === 2) {
+      const [a, b] = [...pts.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      const ns = Math.min(16, Math.max(0.02, pinch.s * d / pinch.d));
+      st.ox = mx - (pinch.mx - pinch.ox) * ns / pinch.s; st.oy = my - (pinch.my - pinch.oy) * ns / pinch.s; st.s = ns;
+      if (st.zoom) { st.zoom = ""; refreshUI(); }
+      draw(); return;
+    }
+    if (!drag) return;
+    if (drag.split) setSplit(p[0]);
+    else { st.ox = drag.ox + (p[0] - drag.x); st.oy = drag.oy + (p[1] - drag.y); }
+    draw();
+  });
+  const up = e => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (!pts.size) { drag = null; c.classList.remove("drag"); }
+  };
+  c.addEventListener("pointerup", up);
+  c.addEventListener("pointercancel", up);
+  c.addEventListener("wheel", e => {
+    e.preventDefault();
+    const [mx, my] = toCanvas(e);
+    const ns = Math.min(16, Math.max(0.02, st.s * Math.exp(-e.deltaY * 0.0015)));
+    st.ox = mx - (mx - st.ox) * ns / st.s; st.oy = my - (my - st.oy) * ns / st.s; st.s = ns;
+    if (st.zoom) { st.zoom = ""; refreshUI(); } draw();
+  }, { passive: false });
+  c.addEventListener("dblclick", () => { if (st.mode !== "slider") { fitPending = true; draw(); } });
+  c.addEventListener("contextmenu", e => e.preventDefault());
+}
+
+// ---------- navigation & controls
+function step(dir) { const p = view.indexOf(st.i); return view[((p < 0 ? 0 : p) + dir + view.length) % view.length]; }
+let gridScroll = 0;
+function openViewer(i) { gridScroll = scrollY; st.viewing = true; document.body.classList.add("viewing"); go(i, true); buildStage(); refreshUI(); scrollTo({ top: 0 }); }
+function closeViewer() { st.viewing = false; document.body.classList.remove("viewing"); stage.innerHTML = ""; views = []; buildGrid(); refreshUI();
+  const t = grid.querySelector(`.tile[data-i="${st.i}"]`); if (t) t.scrollIntoView({ block: "center" }); else scrollTo({ top: gridScroll }); }
+let swipeId = 0;
+const END = 0.75;  // where the divider rests after the swipe, as a fraction of the image width
+function swipeIn(i) {  // slider opens on the original, the divider runs all the way left, then bounces back to END
+  const id = ++swipeId;
+  if (st.mode !== "slider") return;
+  st.split = 1;
+  prepare(i).then(() => {
+    if (id !== swipeId || st.i !== i || st.mode !== "slider") return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { st.split = END; draw(); return; }
+    const t0 = performance.now(), A = 650, B = 600, c1 = 1.2, c3 = c1 + 1;
+    const tick = now => {
+      if (id !== swipeId) return;
+      const t = now - t0;
+      if (t < A) { const k = t / A; st.split = 1 - (k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2); }
+      else { const k = Math.min(1, (t - A) / B); st.split = END * (1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2)); }
+      draw();
+      if (t < A + B) requestAnimationFrame(tick); else { st.split = END; draw(); }
+    };
+    requestAnimationFrame(tick);
+  });
+}
+function go(i, open) { st.i = i; fitPending = true; st.flickOn = true; if (open) swipeIn(i); else swipeId++; refreshUI(); draw(); prepare(step(1)); }
+function setBg(bg) { st.bg = bg; savePrefs(); if (!st.viewing) buildGrid(); else if (st.mode === "slider") buildStage(); refreshUI(); draw(); }
+function setMode(m) { st.mode = m; st.swap = false; st.hold = false; st.flickOn = true; savePrefs(); buildStage(); refreshUI(); }
+function placeKnobs() {
+  document.querySelectorAll(".seg").forEach(seg => {
+    let k = seg.querySelector(".knob"); if (!k) { k = document.createElement("span"); k.className = "knob"; seg.prepend(k); }
+    const on = seg.querySelector("button.on");
+    if (!on || !seg.offsetParent) { k.style.opacity = 0; return; }
+    const first = !k.style.width || k.style.width === "0px" || k.style.opacity !== "1";  // first show: no grow-from-zero animation
+    if (first) k.style.transition = "none";
+    k.style.opacity = 1; k.style.width = on.offsetWidth + "px"; k.style.transform = `translateX(${on.offsetLeft}px)`;
+    if (first) { k.offsetWidth; k.style.transition = ""; }
+  });
+}
+function refreshUI() {
+  const set = (sel, key, val) => document.querySelectorAll(sel).forEach(b => b.classList.toggle("on", b.dataset[key] === val));
+  set("[data-bg]", "bg", st.bg); set("[data-mode]", "mode", st.mode); set("[data-tile]", "tile", st.tile);
+  set("[data-filter]", "filter", st.filter); set("[data-zoom]", "zoom", st.zoom);
+  const d = IMAGES[st.i];
+  const vt = document.getElementById("vtitle"); vt.replaceChildren();
+  if (st.viewing) {
+    const a = document.createElement("div"), b = document.createElement("div"); a.className = "vt"; b.className = "why";
+    a.textContent = `${view.indexOf(st.i) + 1}/${view.length} · ${isImp(d) ? (COPY.badge || "★ Impressive") + " · " : ""}${d.title} · ${d.cat || ""} · ${d.w}×${d.h} ${d.kind}`;
+    b.textContent = d.pick.charAt(0).toUpperCase() + d.pick.slice(1); vt.append(a, b);
+  }
+  document.getElementById("vsrc").href = SRC_PAGE + "#" + slug(d.id);
+  placeKnobs();
+}
+document.querySelectorAll("[data-bg]").forEach(b => b.onclick = () => setBg(b.dataset.bg));
+document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll("[data-tile]").forEach(b => b.onclick = () => { st.tile = b.dataset.tile; savePrefs(); buildGrid(); refreshUI(); });
+document.querySelectorAll("[data-zoom]").forEach(b => b.onclick = () => { if (!cur) return; if (b.dataset.zoom === "fit") fit(cur); else { zoomTo(+b.dataset.zoom); st.zoom = b.dataset.zoom; } refreshUI(); draw(); });
+document.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { st.filter = b.dataset.filter; buildGrid(); refreshUI(); });
+document.getElementById("back").onclick = closeViewer;
+document.getElementById("prev").onclick = () => go(step(-1));
+document.getElementById("next").onclick = () => go(step(1));
+document.getElementById("prev2").onclick = () => go(step(-1));
+document.getElementById("next2").onclick = () => go(step(1));
+setInterval(() => { if (st.viewing && st.mode === "flicker" && st.flickOn && !st.hold) { st.swap = !st.swap; draw(); } }, 650);
+const BGKEYS = ["teal", "checker", "stripes", "black", "white", "matte"];
+addEventListener("keydown", e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key >= "1" && e.key <= "6") return setBg(BGKEYS[+e.key - 1]);
+  if (!st.viewing) return;
+  if (e.key === "Escape") closeViewer();
+  else if (e.key === "ArrowRight") go(step(1));
+  else if (e.key === "ArrowLeft") go(step(-1));
+  else if (e.key === "s") setMode("side"); else if (e.key === "l") setMode("slider");
+  else if (e.key === "f") { if (st.mode === "flicker") { st.flickOn = !st.flickOn; draw(); } else setMode("flicker"); }
+  else if (e.key === " ") { e.preventDefault(); if (!st.hold) { st.hold = true; draw(); } }
+});
+addEventListener("keyup", e => { if (e.key === " " && st.viewing) { st.hold = false; draw(); } });
+addEventListener("resize", () => { if (st.viewing) resize(); placeKnobs(); restFns.forEach(f => f()); });
+document.fonts && document.fonts.ready.then(placeKnobs);
+
+buildGrid(); refreshUI();
+</script>
+</body>
+</html>
